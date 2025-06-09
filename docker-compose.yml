@@ -1,0 +1,21 @@
+services:
+  master:
+    build: .
+    command: ["--name", "master"]
+    networks:
+      - homenet
+  slave1:
+    build: .
+    command: ["--name", "slave1"]
+    networks:
+      - homenet
+
+  slave2:
+    build: .
+    command: ["--name", "slave2"]
+    networks:
+      - homenet
+
+networks:
+  homenet:
+    driver: bridge
