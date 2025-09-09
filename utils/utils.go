@@ -11,6 +11,15 @@ func PrintSysInfo() {
 	fmt.Printf("OS: %s\n", runtime.GOOS)
 	fmt.Printf("ARCH: %s\n", runtime.GOARCH)
 	fmt.Printf("IP: %s\n", GetLocalIP())
+
+	deviceinfo, err := GetDeviceInfo()
+	if err != nil {
+		fmt.Printf("Error getting device info: %v\n", err)
+		return
+	}
+	fmt.Printf("CPU ID: %s\n", deviceinfo.CPUID)
+	fmt.Printf("Motherboard Serial: %s\n", deviceinfo.MotherboardSerial)
+	fmt.Printf("Unique Device ID: %s\n", deviceinfo.UniqueDeviceID)
 }
 
 func GetOutboundIP() string {
