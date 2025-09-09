@@ -1,21 +1,15 @@
 services:
-  master:
+  player1:
     build: .
-    command: ["--name", "master"]
-    networks:
-      - homenet
-  slave1:
+    network_mode: bridge
+    container_name: game_player1
+    
+  player2:
     build: .
-    command: ["--name", "slave1"]
-    networks:
-      - homenet
-
-  slave2:
+    network_mode: bridge
+    container_name: game_player2
+    
+  player3:
     build: .
-    command: ["--name", "slave2"]
-    networks:
-      - homenet
-
-networks:
-  homenet:
-    driver: bridge
+    network_mode: bridge
+    container_name: game_player3
