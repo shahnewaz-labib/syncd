@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	"syncd/announcement"
@@ -13,7 +12,7 @@ const (
 )
 
 func main() {
-	fmt.Printf("My IP: %s\n", utils.GetLocalIP())
+	utils.PrintSysInfo()
 	go announcement.Listen()
 	time.Sleep(100 * time.Millisecond)
 	go announcement.Broadcast()

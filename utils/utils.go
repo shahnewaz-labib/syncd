@@ -1,9 +1,17 @@
 package utils
 
 import (
+	"fmt"
 	"net"
+	"runtime"
 	"strings"
 )
+
+func PrintSysInfo() {
+	fmt.Printf("OS: %s\n", runtime.GOOS)
+	fmt.Printf("ARCH: %s\n", runtime.GOARCH)
+	fmt.Printf("IP: %s\n", GetLocalIP())
+}
 
 func GetOutboundIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
