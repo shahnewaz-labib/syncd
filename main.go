@@ -1,14 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"syncd/announcement"
+	"syncd/api"
+	"syncd/config"
 	"syncd/utils"
-)
-
-const (
-	PORT = 9999
 )
 
 func main() {
@@ -16,5 +15,9 @@ func main() {
 	go announcement.Listen()
 	time.Sleep(100 * time.Millisecond)
 	go announcement.Broadcast()
+
+	fmt.Printf("Starting API server on port %s\n", config.API_PORT)
+	api.StartServer(config.API_PORT)
+
 	select {} // Keep running
 }

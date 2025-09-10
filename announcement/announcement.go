@@ -7,13 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"syncd/config"
 	"syncd/utils"
-)
-
-const (
-	BROADCAST_INTERVAL = 5 * time.Second
-	SYNCD_DISCOVER     = "SYNCD_DISCOVER"
-	DEVICE_TIMEOUT     = 15 * time.Second
 )
 
 type Device struct {
@@ -38,7 +33,7 @@ func New(deviceID string, username string) Announcement {
 	return Announcement{
 		DeviceID: deviceID,
 		Username: username,
-		Type:     SYNCD_DISCOVER,
+		Type:     config.SYNCD_DISCOVER,
 	}
 }
 
@@ -51,7 +46,7 @@ func (a Announcement) String() string {
 	return a.Type
 }
 
-const PORT = 9999
+const PORT = config.DISCOVERY_PORT
 
 func Broadcast() {
 	conn, err := net.Dial("udp", "255.255.255.255:"+fmt.Sprint(PORT))
@@ -69,7 +64,7 @@ func Broadcast() {
 	announcement := New(deviceInfo.UniqueDeviceID, utils.GetUsername())
 	for {
 		conn.Write(announcement.ToBytes())
-		time.Sleep(BROADCAST_INTERVAL)
+		time.Sleep(config.BROADCAST_INTERVAL)
 	}
 }
 
@@ -99,7 +94,7 @@ func Listen() {
 		message := string(buf[:n])
 		parts := strings.Split(message, "|")
 
-		if len(parts) >= 3 && parts[0] == SYNCD_DISCOVER {
+		if len(parts) >= 3 && parts[0] == config.SYNCD_DISCOVER {
 			deviceID := parts[1]
 			username := parts[2]
 			ip := clientAddr.IP.String()
@@ -133,7 +128,7 @@ func cleanupOfflineDevices() {
 		now := time.Now()
 
 		for deviceID, device := range onlineDevices {
-			if now.Sub(device.LastSeen) > DEVICE_TIMEOUT {
+			if now.Sub(device.LastSeen) > config.DEVICE_TIMEOUT {
 				fmt.Printf("Device offline: %s (%s)\n", device.Username, device.DeviceID)
 				delete(onlineDevices, deviceID)
 			}
