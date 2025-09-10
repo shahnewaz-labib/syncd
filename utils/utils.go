@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"net"
+	"os/user"
 	"runtime"
 	"strings"
 )
@@ -89,4 +90,12 @@ func GetLocalIP() string {
 		return fallbackIP
 	}
 	return "No local IP found"
+}
+
+func GetUsername() string {
+	currentUser, err := user.Current()
+	if err != nil {
+		return "unknown"
+	}
+	return currentUser.Username
 }
