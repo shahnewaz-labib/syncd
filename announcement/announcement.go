@@ -8,22 +8,29 @@ import (
 	"syncd/utils"
 )
 
+const (
+	BROADCAST_INTERVAL = 5 * time.Second
+	SYNCD_DISCOVER     = "SYNCD_DISCOVER"
+)
+
 type Announcement struct {
-	Message string
+	DeviceID string
+	Type     string
 }
 
-func New() Announcement {
+func New(deviceID string) Announcement {
 	return Announcement{
-		Message: "SYNCD_DISCOVER",
+		DeviceID: deviceID,
+		Type:     SYNCD_DISCOVER,
 	}
 }
 
 func (a Announcement) ToBytes() []byte {
-	return []byte(a.Message)
+	return []byte(a.Type)
 }
 
 func (a Announcement) String() string {
-	return a.Message
+	return a.Type
 }
 
 const PORT = 9999
@@ -36,10 +43,15 @@ func Broadcast() {
 	}
 	defer conn.Close()
 
-	announcement := New()
+	deviceInfo, err := utils.GetDeviceInfo()
+	if err != nil {
+		fmt.Printf("Error getting device info: %v\n", err)
+		return
+	}
+	announcement := New(deviceInfo.UniqueDeviceID)
 	for {
 		conn.Write(announcement.ToBytes())
-		time.Sleep(2 * time.Second)
+		time.Sleep(BROADCAST_INTERVAL)
 	}
 }
 
@@ -58,7 +70,6 @@ func Listen() {
 	defer conn.Close()
 
 	myIP := utils.GetLocalIP()
-	expectedAnnouncement := New()
 	buf := make([]byte, 1024)
 	for {
 		n, clientAddr, err := conn.ReadFromUDP(buf)
@@ -66,7 +77,7 @@ func Listen() {
 			fmt.Printf("Read error: %v\n", err)
 			continue
 		}
-		if string(buf[:n]) == expectedAnnouncement.Message {
+		if string(buf[:n]) == SYNCD_DISCOVER {
 			if clientAddr.IP.String() == myIP {
 				fmt.Printf("Player found: %s (self)\n", clientAddr.IP)
 			} else {
