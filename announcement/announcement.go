@@ -94,6 +94,7 @@ func Listen() {
 		message := string(buf[:n])
 		parts := strings.Split(message, "|")
 
+		// TODO: do better validation
 		if len(parts) >= 3 && parts[0] == config.SYNCD_DISCOVER {
 			deviceID := parts[1]
 			username := parts[2]
@@ -102,6 +103,11 @@ func Listen() {
 			updateOnlineDevice(deviceID, username, ip)
 		}
 	}
+}
+
+func ListenAndBroadcast() {
+	go Listen()
+	go Broadcast()
 }
 
 func updateOnlineDevice(deviceID, username, ip string) {

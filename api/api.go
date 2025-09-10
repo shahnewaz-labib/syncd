@@ -1,10 +1,12 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"syncd/announcement"
+	"syncd/config"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,13 +34,10 @@ func devicesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func StartServer(port string) {
+func StartServer() {
 	r := gin.Default()
 	r.GET("/devices", devicesHandler)
 
-	if port == "" {
-		port = "8080"
-	}
-
-	r.Run(":" + port)
+	r.Run(":" + config.API_PORT)
+	fmt.Printf("Starting API server on port %s\n", config.API_PORT)
 }
