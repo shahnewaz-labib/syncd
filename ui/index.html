@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SyncD - Active Devices</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .status {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .refresh-indicator {
+            float: right;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <h1>syncd - Active Devices <span class="refresh-indicator">Auto-refresh: 5s</span></h1>
+    
+    <div id="devices-table" hx-get="/devices-table" hx-trigger="load, every 5s" hx-target="#devices-table">
+        <p>Loading devices...</p>
+    </div>
+</body>
+</html>

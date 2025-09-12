@@ -3,6 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"syncd/announcement"
@@ -38,6 +39,6 @@ func StartServer() {
 	r := gin.Default()
 	r.GET("/devices", devicesHandler)
 
-	r.Run(":" + config.API_PORT)
-	fmt.Printf("Starting API server on port %s\n", config.API_PORT)
+	fmt.Printf("Starting API server on port %d\n", config.API_PORT)
+	r.Run(":" + strconv.Itoa(config.API_PORT))
 }

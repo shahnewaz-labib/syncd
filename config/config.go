@@ -5,7 +5,8 @@ import "time"
 const (
 	// Network configuration
 	DISCOVERY_PORT = 9999
-	API_PORT       = "10000"
+	API_PORT       = 10000
+	UI_PORT        = 10001
 
 	// Announcement settings
 	BROADCAST_INTERVAL = 5 * time.Second
