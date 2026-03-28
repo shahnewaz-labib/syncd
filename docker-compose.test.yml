@@ -1,0 +1,45 @@
+services:
+  node1:
+    build: .
+    container_name: syncd-node1
+    hostname: node1
+    networks:
+      syncd-net:
+        ipv4_address: 172.28.0.10
+    ports:
+      - "10010:10000"
+      - "10011:10001"
+    volumes:
+      - ./test/testfiles:/testfiles
+      - node1-downloads:/downloads
+    environment:
+      - USER=alice
+    command: ["daemon", "--auto-accept", "--save-path", "/downloads"]
+
+  node2:
+    build: .
+    container_name: syncd-node2
+    hostname: node2
+    networks:
+      syncd-net:
+        ipv4_address: 172.28.0.11
+    ports:
+      - "10020:10000"
+      - "10021:10001"
+    volumes:
+      - ./test/testfiles:/testfiles
+      - node2-downloads:/downloads
+    environment:
+      - USER=bob
+    command: ["daemon", "--auto-accept", "--save-path", "/downloads"]
+
+networks:
+  syncd-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  node1-downloads:
+  node2-downloads:
