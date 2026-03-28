@@ -1,0 +1,2 @@
+Hello from syncd integration test!
+This is a test file.

@@ -1,0 +1,191 @@
+name: Integration Tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker images
+        run: docker compose -f docker-compose.test.yml build
+
+      - name: Start test containers
+        run: docker compose -f docker-compose.test.yml up -d
+
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for services to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:10010/devices > /dev/null 2>&1; then
+              echo "Services are ready!"
+              exit 0
+            fi
+            echo "Waiting... ($i/30)"
+            sleep 1
+          done
+          echo "Services failed to start"
+          exit 1
+
+      - name: Test - Device Discovery
+        run: |
+          echo "Testing device discovery (with retry)..."
+
+          # Wait for Node1 to discover Node2
+          for i in {1..30}; do
+            DEVICES=$(curl -s http://localhost:10010/devices)
+            if echo "$DEVICES" | grep -q "172.28.0.11"; then
+              echo "Node1 sees: $DEVICES"
+              echo "PASS: Node1 discovered Node2"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Node1 sees: $DEVICES"
+              echo "FAIL: Node1 did not discover Node2 after 30 seconds"
+              exit 1
+            fi
+            echo "Waiting for discovery... ($i/30)"
+            sleep 1
+          done
+
+          # Wait for Node2 to discover Node1
+          for i in {1..30}; do
+            DEVICES2=$(curl -s http://localhost:10020/devices)
+            if echo "$DEVICES2" | grep -q "172.28.0.10"; then
+              echo "Node2 sees: $DEVICES2"
+              echo "PASS: Node2 discovered Node1"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "Node2 sees: $DEVICES2"
+              echo "FAIL: Node2 did not discover Node1 after 30 seconds"
+              exit 1
+            fi
+            echo "Waiting for discovery... ($i/30)"
+            sleep 1
+          done
+
+      - name: Test - API Endpoints
+        run: |
+          echo "Testing API endpoints..."
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:10010/devices)
+          if [ "$STATUS" = "200" ]; then
+            echo "PASS: /devices returns 200"
+          else
+            echo "FAIL: /devices returned $STATUS"
+            exit 1
+          fi
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:10010/transfer/status/nonexistent)
+          if [ "$STATUS" = "404" ]; then
+            echo "PASS: /transfer/status returns 404 for unknown transfer"
+          else
+            echo "FAIL: /transfer/status returned $STATUS"
+            exit 1
+          fi
+
+      - name: Test - Transfer Request API
+        run: |
+          echo "Testing transfer request API..."
+
+          RESPONSE=$(curl -s -X POST http://localhost:10020/transfer/request \
+            -H "Content-Type: application/json" \
+            -d '{
+              "transfer_id": "test-123",
+              "sender_id": "sender-device-id",
+              "sender_name": "alice",
+              "sender_ip": "172.28.0.10",
+              "file_name": "test.txt",
+              "file_size": 1024,
+              "checksum": "abc123"
+            }')
+
+          if echo "$RESPONSE" | grep -q "pending"; then
+            echo "PASS: Transfer request accepted"
+          else
+            echo "FAIL: Transfer request not accepted: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Test - File Transfer
+        run: |
+          echo "Testing file transfer..."
+
+          # Create test file
+          docker exec syncd-node1 sh -c 'echo "Hello from GitHub Actions!" > /testfiles/hello.txt'
+
+          # Send file
+          docker exec syncd-node1 syncd send /testfiles/hello.txt --to 172.28.0.11 --wait &
+          sleep 5
+
+          # Verify
+          if docker exec syncd-node2 test -f /downloads/hello.txt; then
+            RECEIVED=$(docker exec syncd-node2 cat /downloads/hello.txt)
+            ORIGINAL=$(docker exec syncd-node1 cat /testfiles/hello.txt)
+            if [ "$RECEIVED" = "$ORIGINAL" ]; then
+              echo "PASS: File transferred successfully!"
+              echo "Content: $RECEIVED"
+            else
+              echo "FAIL: Content mismatch"
+              exit 1
+            fi
+          else
+            echo "FAIL: File not received"
+            docker exec syncd-node2 ls -la /downloads/
+            exit 1
+          fi
+
+      - name: Test - Large File Transfer with Checksum
+        run: |
+          echo "Testing large file transfer..."
+
+          # Create 100KB test file in /tmp (not /testfiles to avoid overwriting local files)
+          docker exec syncd-node1 sh -c 'dd if=/dev/urandom of=/tmp/large.bin bs=1024 count=100 2>/dev/null'
+          ORIGINAL_SUM=$(docker exec syncd-node1 sha256sum /tmp/large.bin | awk '{print $1}')
+          echo "Original checksum: $ORIGINAL_SUM"
+
+          # Send file
+          docker exec syncd-node1 syncd send /tmp/large.bin --to 172.28.0.11 --wait &
+          sleep 10
+
+          # Verify checksum
+          if docker exec syncd-node2 test -f /downloads/large.bin; then
+            RECEIVED_SUM=$(docker exec syncd-node2 sha256sum /downloads/large.bin | awk '{print $1}')
+            echo "Received checksum: $RECEIVED_SUM"
+            if [ "$ORIGINAL_SUM" = "$RECEIVED_SUM" ]; then
+              echo "PASS: Large file transferred with matching checksum!"
+            else
+              echo "FAIL: Checksum mismatch"
+              exit 1
+            fi
+          else
+            echo "FAIL: Large file not received"
+            exit 1
+          fi
+
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          echo "=== Node1 Logs ==="
+          docker logs syncd-node1
+          echo "=== Node2 Logs ==="
+          docker logs syncd-node2
+
+      - name: Cleanup
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v

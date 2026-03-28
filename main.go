@@ -1,16 +1,7 @@
 package main
 
-import (
-	"syncd/announcement"
-	"syncd/api"
-	"syncd/utils"
-)
+import "syncd/cmd"
 
 func main() {
-	utils.PrintSysInfo()
-
-	announcement.ListenAndBroadcast()
-	api.StartServer()
-
-	select {} // Keep running
+	cmd.Execute()
 }

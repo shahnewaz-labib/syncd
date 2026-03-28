@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"net/http"
 	"time"
 
@@ -37,7 +36,7 @@ func devicesHandler(c *gin.Context) {
 func StartServer() {
 	r := gin.Default()
 	r.GET("/devices", devicesHandler)
+	RegisterTransferRoutes(r)
 
 	r.Run(":" + config.API_PORT)
-	fmt.Printf("Starting API server on port %s\n", config.API_PORT)
 }

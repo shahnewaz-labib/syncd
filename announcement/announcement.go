@@ -122,7 +122,6 @@ func updateOnlineDevice(deviceID, username, ip string) {
 	}
 
 	onlineDevices[deviceID] = device
-	fmt.Printf("Device online: %s (%s) - %s\n", username, deviceID, ip)
 }
 
 func cleanupOfflineDevices() {
@@ -135,7 +134,6 @@ func cleanupOfflineDevices() {
 
 		for deviceID, device := range onlineDevices {
 			if now.Sub(device.LastSeen) > config.DEVICE_TIMEOUT {
-				fmt.Printf("Device offline: %s (%s)\n", device.Username, device.DeviceID)
 				delete(onlineDevices, deviceID)
 			}
 		}
