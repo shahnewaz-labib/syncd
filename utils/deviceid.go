@@ -3,6 +3,7 @@ package utils
 import (
 	"crypto/sha256"
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -174,14 +175,16 @@ func GenerateDeviceID(cpuID, motherboardSerial string) string {
 }
 
 func GetDeviceInfo() (*DeviceInfo, error) {
+	// Try to get CPU ID, use fallback if not available
 	cpuID, err := GetCPUID()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get CPU ID: %v", err)
+	if err != nil || cpuID == "" {
+		cpuID = getFallbackIdentifier("cpu")
 	}
 
+	// Try to get motherboard serial, use fallback if not available
 	motherboardSerial, err := GetMotherboardSerial()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get motherboard serial: %v", err)
+	if err != nil || motherboardSerial == "" {
+		motherboardSerial = getFallbackIdentifier("board")
 	}
 
 	deviceID := GenerateDeviceID(cpuID, motherboardSerial)
@@ -191,4 +194,29 @@ func GetDeviceInfo() (*DeviceInfo, error) {
 		MotherboardSerial: motherboardSerial,
 		UniqueDeviceID:    deviceID,
 	}, nil
+}
+
+// getFallbackIdentifier generates a fallback identifier using hostname and other available info
+func getFallbackIdentifier(prefix string) string {
+	parts := []string{prefix}
+
+	// Try hostname
+	if hostname, err := os.Hostname(); err == nil && hostname != "" {
+		parts = append(parts, hostname)
+	}
+
+	// Try machine-id on Linux
+	if runtime.GOOS == "linux" {
+		if data, err := os.ReadFile("/etc/machine-id"); err == nil {
+			machineID := strings.TrimSpace(string(data))
+			if machineID != "" {
+				parts = append(parts, machineID)
+			}
+		}
+	}
+
+	// Add OS info
+	parts = append(parts, runtime.GOOS, runtime.GOARCH)
+
+	return strings.Join(parts, "-")
 }

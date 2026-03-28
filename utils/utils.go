@@ -1,11 +1,16 @@
 package utils
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net"
+	"net/http"
 	"os/user"
 	"runtime"
 	"strings"
+
+	"syncd/config"
 )
 
 func PrintSysInfo() {
@@ -13,14 +18,8 @@ func PrintSysInfo() {
 	fmt.Printf("ARCH: %s\n", runtime.GOARCH)
 	fmt.Printf("IP: %s\n", GetLocalIP())
 
-	deviceinfo, err := GetDeviceInfo()
-	if err != nil {
-		fmt.Printf("Error getting device info: %v\n", err)
-		return
-	}
-	fmt.Printf("CPU ID: %s\n", deviceinfo.CPUID)
-	fmt.Printf("Motherboard Serial: %s\n", deviceinfo.MotherboardSerial)
-	fmt.Printf("Unique Device ID: %s\n", deviceinfo.UniqueDeviceID)
+	deviceinfo, _ := GetDeviceInfo()
+	fmt.Printf("Device ID: %s\n", deviceinfo.UniqueDeviceID)
 }
 
 func GetOutboundIP() string {
@@ -98,4 +97,23 @@ func GetUsername() string {
 		return "unknown"
 	}
 	return currentUser.Username
+}
+
+func PostJSON(targetIP, path string, payload any) error {
+	url := fmt.Sprintf("http://%s:%s%s", targetIP, config.API_PORT, path)
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("request failed with status %d", resp.StatusCode)
+	}
+	return nil
 }
